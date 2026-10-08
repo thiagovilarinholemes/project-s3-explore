@@ -1,4 +1,4 @@
-# 📌 S3 Explores
+# 📌 S3 Explore
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/tvlemes/localstack_dynamodb/blob/main/LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 [![Status](https://img.shields.io/badge/Status-Concluído-green.svg)]()
@@ -9,7 +9,7 @@
 
 ## 🎯 Objetivos 
 
-Houve a necessidade de criar uma interface gráfica para trabalhar com o emulador do *S3 Localstack*, para agilizar o processo de desenvolvimento
+Diante da necessidade de tornar o processo de desenvolvimento mais ágil e eficiente, foi proposta a criação de uma **interface gráfica para gerenciamento do emulador S3 LocalStack**. A solução tem como objetivo facilitar a visualização, organização e manipulação dos recursos armazenados no ambiente S3, reduzindo a dependência de comandos via terminal e proporcionando uma experiência mais intuitiva durante o desenvolvimento e os testes da aplicação.
 
 ---
 
@@ -39,13 +39,13 @@ s3_explore/
 
 ## 🪣 LocalStack
 
-O serviço LocalStack possui a seguinte configuração:
+O serviço LocalStack possui as seguintes configurações:
 ```yaml
 localstack:
   image: localstack/localstack:latest
   container_name: electoral-localstack
   ports:
-    - "${LOCALSTACK_PORT}:4566"
+    - "4566:4566"
   environment:
     - PERSISTENCE=1
   volumes:
@@ -63,7 +63,7 @@ http://localstack:4566
 
 ## 🌐 S3 Explorer
 
-A configuração discutida para o serviço é:
+A configuração para o serviço é:
 
 ```yaml
 s3-explorer:
