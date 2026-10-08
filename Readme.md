@@ -9,7 +9,7 @@
 
 ## 🎯 Objetivos 
 
-<p style="text-align: left;">Diante da necessidade de tornar o processo de desenvolvimento mais ágil e eficiente, foi proposta a criação de uma **interface gráfica para gerenciamento do emulador S3 LocalStack**. A solução tem como objetivo facilitar a visualização, organização e manipulação dos recursos armazenados no ambiente S3, reduzindo a dependência de comandos via terminal e proporcionando uma experiência mais intuitiva durante o desenvolvimento e os testes da aplicação.</p>
+Diante da necessidade de tornar o processo de desenvolvimento mais ágil e eficiente, foi proposta a criação de uma **interface gráfica para gerenciamento do emulador S3 LocalStack**. A solução tem como objetivo facilitar a visualização, organização e manipulação dos recursos armazenados no ambiente S3, reduzindo a dependência de comandos via terminal e proporcionando uma experiência mais intuitiva durante o desenvolvimento e os testes da aplicação.
 
 ---
 
