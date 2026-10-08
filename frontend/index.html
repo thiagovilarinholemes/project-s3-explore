@@ -1,0 +1,296 @@
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalStack S3 Explorer</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#0b0f14; --panel:#111821; --panel2:#17212b; --border:#263442;
+  --text:#e8eef5; --muted:#8fa0b2; --accent:#5aa9ff; --danger:#ff6678;
+  --success:#42d392; --shadow:0 18px 50px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh;display:grid;grid-template-columns:290px 1fr}
+.sidebar{border-right:1px solid var(--border);background:#0e141b;padding:22px 16px}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:25px}
+.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#5aa9ff,#7c5cff);display:grid;place-items:center;font-weight:800}
+.brand h1{font-size:16px;margin:0}.brand small{color:var(--muted)}
+.bucket-head{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:18px 8px 8px}
+.icon-btn,.btn{border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:9px;padding:9px 12px}
+.icon-btn{padding:5px 9px}.btn.primary{background:var(--accent);border-color:var(--accent);color:#06101c;font-weight:700}
+.btn.danger{color:#ff9aa6;border-color:#56303a}
+.btn.ghost{background:transparent}
+.bucket-list{display:grid;gap:5px}
+.bucket{padding:11px 12px;border-radius:9px;color:#b7c3cf;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.bucket:hover,.bucket.active{background:#182432;color:#fff}.bucket span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status{font-size:12px;color:var(--muted);margin-top:25px;padding:10px;border:1px solid var(--border);border-radius:9px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--success);margin-right:6px}
+.main{padding:25px;min-width:0}
+.topbar{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:22px}
+.title h2{margin:0 0 5px;font-size:25px}.title p{margin:0;color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.toolbar{padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.search{background:#0d131a;border:1px solid var(--border);border-radius:9px;color:var(--text);padding:10px 12px;min-width:240px;outline:none}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{text-align:left;padding:13px 15px;border-bottom:1px solid #202c38;font-size:13px}
+th{color:var(--muted);font-weight:600;background:#131c25}
+td.key{font-weight:600;color:#dce7f2}
+.actions-cell{display:flex;gap:6px;justify-content:flex-end}
+.empty{text-align:center;padding:55px;color:var(--muted)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:5}
+.modal.open{display:flex}.modal-box{background:#101821;border:1px solid var(--border);border-radius:15px;width:min(1000px,96vw);max-height:90vh;overflow:auto;padding:20px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.modal-head h3{margin:0}.close{background:transparent;border:0;color:var(--muted);font-size:24px}
+.form{display:grid;gap:12px}.form label{color:var(--muted);font-size:13px}.form input,.form textarea{width:100%;background:#0a1016;color:var(--text);border:1px solid var(--border);border-radius:9px;padding:11px}.form textarea{min-height:220px;resize:vertical}
+.preview{background:#0a1016;border:1px solid var(--border);border-radius:10px;padding:15px;overflow:auto;max-height:65vh}
+pre{white-space:pre-wrap;word-break:break-word;margin:0;font-family:Consolas,monospace;font-size:13px;line-height:1.55}
+.preview table{min-width:0}.preview th,.preview td{padding:8px;border:1px solid var(--border)}
+.badge{padding:4px 8px;border-radius:99px;background:#18283a;color:#91c6ff;font-size:11px}
+.toast{position:fixed;right:20px;bottom:20px;background:#17222c;border:1px solid var(--border);padding:12px 15px;border-radius:10px;display:none;z-index:10}
+@media(max-width:800px){.app{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid var(--border)}.bucket-list{display:flex;overflow:auto}.bucket{min-width:180px}.main{padding:16px}.topbar{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><div class="logo">S3</div><div><h1>LocalStack Explorer</h1><small>S3 Management Console</small></div></div>
+  <div class="bucket-head"><span>Buckets</span><button class="icon-btn" onclick="openBucketModal()">+</button></div>
+  <div id="bucketList" class="bucket-list"></div>
+  <div class="status"><span class="dot"></span><span id="statusText">Conectando ao LocalStack...</span></div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="title"><h2 id="pageTitle">Selecione um bucket</h2><p id="pageSubtitle">Gerencie buckets e objetos do LocalStack S3.</p></div>
+    <div class="actions">
+      <button class="btn" onclick="refreshAll()">↻ Atualizar</button>
+      <button class="btn primary" onclick="openUploadModal()" id="uploadBtn" disabled>Enviar arquivo</button>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="toolbar">
+      <input id="search" class="search" placeholder="Filtrar arquivos..." oninput="renderObjects()">
+      <div class="actions">
+        <button class="btn ghost" onclick="goToParent()" id="parentFolderBtn" disabled>← Voltar</button>
+        <button class="btn ghost" onclick="openCreateFolder()" id="createFolderBtn" disabled>Nova pasta</button>
+        <button class="btn ghost" onclick="openCreateText()" id="createTextBtn" disabled>Novo TXT</button>
+        <button class="btn ghost" onclick="renameCurrentBucket()" id="renameBucketBtn" disabled>Renomear bucket</button>
+        <button class="btn danger" onclick="deleteCurrentBucket()" id="deleteBucketBtn" disabled>Excluir bucket</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Arquivo</th><th>Tamanho</th><th>Modificado</th><th>Tipo</th><th></th></tr></thead><tbody id="objectTable"></tbody></table></div>
+  </section>
+</main>
+</div>
+
+<div class="modal" id="modal"><div class="modal-box">
+  <div class="modal-head"><h3 id="modalTitle"></h3><button class="close" onclick="closeModal()">×</button></div>
+  <div id="modalBody"></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+let buckets=[], objects=[], folders=[], currentBucket=null, currentPrefix="";
+
+const $=id=>document.getElementById(id);
+async function api(url, options={}) {
+  const r=await fetch(url,options);
+  if(!r.ok){let m="Erro na operação";try{m=(await r.json()).detail||m}catch{};throw new Error(m)}
+  return r.json();
+}
+function toast(msg){$("toast").textContent=msg;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",2600)}
+function fmtSize(n){if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(1)+" KB";return (n/1048576).toFixed(1)+" MB"}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function typeOf(k){let e=k.split(".").pop().toLowerCase();return e.toUpperCase()||"FILE"}
+function renderBuckets(){
+  $("bucketList").innerHTML=buckets.length?buckets.map(b=>`<div class="bucket ${currentBucket===b.name?"active":""}" onclick="selectBucket('${esc(b.name)}')"><span>🪣 ${esc(b.name)}</span><span class="badge">${b.objects}</span></div>`).join(""):`<div class="empty">Nenhum bucket.</div>`;
+}
+async function loadBuckets(){
+  try{buckets=await api("/api/buckets");$("statusText").textContent="LocalStack S3 conectado";renderBuckets()}
+  catch(e){$("statusText").textContent=e.message}
+}
+async function selectBucket(name){
+  currentBucket=name;
+  currentPrefix="";
+  $("pageTitle").textContent=name;
+  $("pageSubtitle").textContent="Objetos armazenados neste bucket.";
+  ["uploadBtn","parentFolderBtn","createFolderBtn","createTextBtn","renameBucketBtn","deleteBucketBtn"].forEach(id=>$(id).disabled=false);
+  renderBuckets();
+  await loadObjects();
+}
+async function loadObjects(){
+  if(!currentBucket)return;
+  try{
+    const data=await api(`/api/buckets/${encodeURIComponent(currentBucket)}/objects?prefix=${encodeURIComponent(currentPrefix)}`);
+    objects=data.objects||[];
+    folders=data.folders||[];
+    renderObjects();
+  }catch(e){toast(e.message)}
+}
+function renderObjects(){
+  let q=$("search").value.toLowerCase();
+
+  const visibleFolders=folders.filter(f=>f.toLowerCase().includes(q));
+  const visibleObjects=objects.filter(o=>o.key.toLowerCase().includes(q));
+
+  const folderRows=visibleFolders.map(folder=>{
+    const name=folder.endsWith("/") ? folder.slice(0,-1) : folder;
+    return `<tr>
+      <td class="key">📁 <button class="btn ghost" style="padding:4px 7px" onclick="openFolder('${esc(folder)}')">${esc(name)}</button></td>
+      <td>-</td>
+      <td>-</td>
+      <td><span class="badge">PASTA</span></td>
+      <td class="actions-cell"><button class="btn danger" onclick="deleteFolder('${esc(folder)}')">Excluir</button></td>
+    </tr>`;
+  }).join("");
+
+  const objectRows=visibleObjects.map(o=>`<tr>
+    <td class="key">📄 ${esc(o.key)}</td>
+    <td>${fmtSize(o.size)}</td>
+    <td>${o.modified?new Date(o.modified).toLocaleString("pt-BR"):"-"}</td>
+    <td><span class="badge">${typeOf(o.key)}</span></td>
+    <td class="actions-cell">
+      <button class="btn" onclick="previewObject('${esc(o.key)}')">Visualizar</button>
+      <button class="btn" onclick="downloadObject('${esc(o.key)}')">Baixar</button>
+      <button class="btn" onclick="editObject('${esc(o.key)}')">Editar</button>
+      <button class="btn danger" onclick="deleteObject('${esc(o.key)}')">Excluir</button>
+    </td>
+  </tr>`).join("");
+
+  const content=folderRows+objectRows;
+  $("objectTable").innerHTML=content || `<tr><td colspan="5" class="empty">${currentBucket?"Nenhum objeto ou pasta encontrado.":"Selecione um bucket para começar."}</td></tr>`;
+}
+function openModal(title,body){$("modalTitle").textContent=title;$("modalBody").innerHTML=body;$("modal").classList.add("open")}
+function closeModal(){$("modal").classList.remove("open")}
+function openBucketModal(){
+  openModal("Criar bucket",`<form class="form" onsubmit="createBucket(event)"><label>Nome do bucket</label><input id="bucketName" required pattern="[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]" placeholder="meu-bucket"><button class="btn primary">Criar bucket</button></form>`)
+}
+
+function openCreateFolder(){
+  openModal("Criar pasta",`<form class="form" onsubmit="createFolder(event)">
+    <label>Nome da pasta</label>
+    <input id="folderName" required placeholder="ex.: candidatos">
+    <div style="color:#8fa0b2;font-size:12px">A pasta será criada dentro de ${esc(currentPrefix||"raiz do bucket")}.</div>
+    <button class="btn primary">Criar pasta</button>
+  </form>`)
+}
+
+async function createFolder(e){
+  e.preventDefault();
+  let name=$("folderName").value.trim().replace(/^\/+|\/+$/g,"");
+  if(!name){toast("Informe o nome da pasta.");return}
+  if(name.includes("..") || name.includes("\\")){toast("Nome de pasta inválido.");return}
+
+  const prefix=currentPrefix ? `${currentPrefix}${name}/` : `${name}/`;
+
+  try{
+    await api(`/api/buckets/${encodeURIComponent(currentBucket)}/folders`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({prefix})
+    });
+    closeModal();
+    await loadObjects();
+    await loadBuckets();
+    toast("Pasta criada.");
+  }catch(e){toast(e.message)}
+}
+
+async function openFolder(folder){
+  currentPrefix=folder;
+  $("search").value="";
+  $("pageTitle").textContent=currentBucket;
+  $("pageSubtitle").textContent=`Pasta: ${folder}`;
+  await loadObjects();
+}
+
+async function goToParent(){
+  if(!currentPrefix)return;
+  const parts=currentPrefix.replace(/\/$/,"").split("/");
+  parts.pop();
+  currentPrefix=parts.length ? parts.join("/")+"/" : "";
+  $("search").value="";
+  $("pageSubtitle").textContent=currentPrefix ? `Pasta: ${currentPrefix}` : "Objetos armazenados neste bucket.";
+  await loadObjects();
+}
+
+async function deleteFolder(folder){
+  if(!confirm(`Excluir a pasta "${folder}" e todos os arquivos dentro dela?`))return;
+  try{
+    await api(`/api/buckets/${encodeURIComponent(currentBucket)}/folders?prefix=${encodeURIComponent(folder)}`,{method:"DELETE"});
+    await loadObjects();
+    await loadBuckets();
+    toast("Pasta excluída.");
+  }catch(e){toast(e.message)}
+}
+async function createBucket(e){e.preventDefault();try{await api("/api/buckets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("bucketName").value})});closeModal();toast("Bucket criado.");await loadBuckets()}catch(e){toast(e.message)}}
+async function renameCurrentBucket(){
+  let name=prompt("Novo nome do bucket:",currentBucket);if(!name||name===currentBucket)return;
+  try{await api(`/api/buckets/${encodeURIComponent(currentBucket)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});currentBucket=name;toast("Bucket atualizado.");await loadBuckets();await selectBucket(name)}catch(e){toast(e.message)}
+}
+async function deleteCurrentBucket(){
+  if(!currentBucket||!confirm(`Excluir o bucket "${currentBucket}" e todos os seus arquivos?`))return;
+  try{await api(`/api/buckets/${encodeURIComponent(currentBucket)}`,{method:"DELETE"});currentBucket=null;objects=[];["uploadBtn","parentFolderBtn","createFolderBtn","createTextBtn","renameBucketBtn","deleteBucketBtn"].forEach(id=>$(id).disabled=true);$("pageTitle").textContent="Selecione um bucket";renderObjects();await loadBuckets();toast("Bucket excluído.")}catch(e){toast(e.message)}
+}
+function openUploadModal(){
+  openModal("Enviar arquivo",`<form class="form" onsubmit="uploadFile(event)"><label>Arquivo</label><input type="file" id="fileInput" required><label>Chave S3 (opcional)</label><input id="objectKey" placeholder="pasta/arquivo.ext"><button class="btn primary">Enviar</button></form>`)
+}
+async function uploadFile(e){
+  e.preventDefault();
+  let f=$("fileInput").files[0];
+  let fd=new FormData();
+  fd.append("file",f);
+  let key=$("objectKey").value.trim();
+  if(!key) key=currentPrefix ? currentPrefix+f.name : f.name;
+  else if(currentPrefix && !key.startsWith(currentPrefix)) key=currentPrefix+key;
+  let url=`/api/buckets/${encodeURIComponent(currentBucket)}/objects/upload?key=${encodeURIComponent(key)}`;
+  try{await api(url,{method:"POST",body:fd});closeModal();await loadObjects();await loadBuckets();toast("Arquivo enviado.")}catch(e){toast(e.message)}
+}
+function openCreateText(){
+  openModal("Criar arquivo TXT",`<form class="form" onsubmit="saveText(event)"><label>Nome do arquivo</label><input id="textKey" required placeholder="notas.txt"><label>Conteúdo</label><textarea id="textContent" placeholder="Digite o conteúdo..."></textarea><button class="btn primary">Salvar</button></form>`)
+}
+async function saveText(e){
+  e.preventDefault();
+  let key=$("textKey").value;
+  if(currentPrefix && !key.startsWith(currentPrefix)) key=currentPrefix+key;
+  try{await api(`/api/buckets/${encodeURIComponent(currentBucket)}/objects-text?key=${encodeURIComponent(key)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({content:$("textContent").value})});closeModal();await loadObjects();toast("Arquivo salvo.")}catch(e){toast(e.message)}
+}
+async function previewObject(key){
+  try{
+    let d=await api(`/api/buckets/${encodeURIComponent(currentBucket)}/objects/${encodeURIComponent(key)}/content`);
+    let html="";
+    if(d.type==="table"){html=`<div style="margin-bottom:10px;color:#8fa0b2">${d.total_rows} linhas no arquivo; exibindo até 500.</div><div class="preview"><table><thead><tr>${d.columns.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${d.rows.map(r=>`<tr>${d.columns.map(c=>`<td>${esc(r[c])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`}
+    else if(d.type==="json")html=`<div class="preview"><pre>${esc(JSON.stringify(d.data,null,2))}</pre></div>`;
+    else if(d.type==="text")html=`<div class="preview"><pre>${esc(d.data)}</pre></div>`;
+    else html=`<div class="preview">${esc(d.message)}<br><br>Tamanho: ${fmtSize(d.size)}</div>`;
+    openModal(key,html)
+  }catch(e){toast(e.message)}
+}
+async function downloadObject(key){window.open(`/api/buckets/${encodeURIComponent(currentBucket)}/objects/${encodeURIComponent(key)}/download`,"_blank")}
+async function deleteObject(key){if(!confirm(`Excluir "${key}"?`))return;try{await api(`/api/buckets/${encodeURIComponent(currentBucket)}/objects/${encodeURIComponent(key)}`,{method:"DELETE"});await loadObjects();await loadBuckets();toast("Arquivo excluído.")}catch(e){toast(e.message)}}
+function editObject(key){
+  let ext=key.split(".").pop().toLowerCase();
+  if(!["txt","json"].includes(ext)){toast("Edição direta disponível para TXT e JSON. Para outros formatos, envie uma nova versão.");return}
+  api(`/api/buckets/${encodeURIComponent(currentBucket)}/objects/${encodeURIComponent(key)}/content`).then(d=>{
+    let content=d.type==="json"?JSON.stringify(d.data,null,2):d.data;
+    openModal(`Editar ${key}`,`<form class="form" onsubmit="saveEdited(event,'${esc(key)}')"><label>Conteúdo</label><textarea id="editContent">${esc(content)}</textarea><button class="btn primary">Salvar alterações</button></form>`)
+  }).catch(e=>toast(e.message))
+}
+async function saveEdited(e,key){
+  e.preventDefault();let blob=new Blob([$("editContent").value],{type:key.endsWith(".json")?"application/json":"text/plain"});
+  let fd=new FormData();fd.append("file",blob,key.split("/").pop());
+  try{await api(`/api/buckets/${encodeURIComponent(currentBucket)}/objects/${encodeURIComponent(key)}`,{method:"PUT",body:fd});closeModal();await loadObjects();toast("Arquivo atualizado.")}catch(e){toast(e.message)}
+}
+async function refreshAll(){await loadBuckets();if(currentBucket)await loadObjects();toast("Dados atualizados.")}
+$("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
+refreshAll();
+</script>
+</body>
+</html>

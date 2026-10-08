@@ -1,0 +1,73 @@
+services:
+
+  # ==========================================================
+  # LOCALSTACK
+  # ==========================================================
+  localstack:
+    image: localstack/localstack:latest
+    container_name: electoral-localstack-container
+
+    restart: unless-stopped
+
+    ports:
+      - "${LOCALSTACK_PORT}:4566"
+
+    environment:
+      SERVICES: s3
+      DEBUG: 0
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      PERSISTENCE: 1
+      TZ: ${TZ}
+
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    env_file:
+      - ./.env
+
+    networks:
+      - network
+
+  # ==========================================================
+  # S3 EXPLORER - INTERFACE GRÁFICA DO S3
+  # ==========================================================
+  s3-explorer:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: s3-explorer:2.0
+    container_name: electoral-s3-explorer-container
+    ports:
+      - "8090:8003"
+    environment:
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - TZ=America/Araguaina
+      
+    depends_on:
+      - localstack
+
+    env_file:
+      - ./.env
+
+    volumes:
+      - localstack_data:/opt/airflow/app
+
+    networks:
+      - network
+
+# ============================================================
+# VOLUMES
+# ============================================================
+volumes:
+  localstack_data:
+
+# ============================================================
+# NETWORK
+# ============================================================
+networks:
+  network:
+    driver: bridge

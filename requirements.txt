@@ -1,0 +1,7 @@
+uvicorn[standard]==0.35.0
+boto3==1.40.26
+python-multipart==0.0.20
+pandas==2.3.2
+openpyxl==3.1.5
+pyarrow==21.0.0
+fastapi 
