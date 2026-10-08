@@ -1,5 +1,5 @@
 # 📌 S3 Explore
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/tvlemes/localstack_dynamodb/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/thiagovilarinholemes/project-s3-explore/blob/main/LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 [![Status](https://img.shields.io/badge/Status-Concluído-green.svg)]()
 
